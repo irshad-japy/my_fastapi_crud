@@ -25,6 +25,13 @@ Note: To login to mysql docker container use below command
 > mysql -u pocuser -p
 > Enter Password: rootpassword
 
+Note: Redis related commands
+1. To find keys
+> redis-cli KEYS '*'
+
+2. To list all keys
+> redis-cli KEYS 'user:*'
+
 References Token:
 https://www.youtube.com/watch?v=hKoD29eYvKY
 https://medium.com/@amirm.lavasani/how-to-structure-your-fastapi-projects-0219a6600a8f
