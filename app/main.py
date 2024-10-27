@@ -7,6 +7,9 @@ from app.db.redis_client import redis_client
 from app.models.user_model import Base
 from app.schemas.user_schema import UserCreate, UserInDB
 from app.repository.user_repository import UserRepository
+from app.util.fastapi_logger import get_logger
+
+logger = get_logger('main')
 
 app = FastAPI()
 
@@ -23,6 +26,7 @@ def get_db():
 
 @app.post("/users/", response_model=UserInDB)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    logger.info("Users API CALL")
     user_repo = UserRepository(db)
     db_user = user_repo.get_user_by_email(user.email)
     if db_user:
@@ -35,6 +39,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.get("/users/{user_id}", response_model=UserInDB)
 async def read_user(user_id: int, db: Session = Depends(get_db)):
+    logger.info('users/user_id API Call')
     # Try to fetch user from Redis cache
     cached_user = await redis_client.get(f"user:{user_id}")
     if cached_user:
@@ -55,3 +60,7 @@ async def read_user(user_id: int, db: Session = Depends(get_db)):
     await redis_client.set(f"user:{user_id}", json.dumps(user_dict))
 
     return db_user
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="localhost", port=8000)
