@@ -1,66 +1,40 @@
-# app/main.py
-import json
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.db.session import SessionLocal, engine
-from app.db.redis_client import redis_client
-from app.models.user_model import Base
-from app.schemas.user_schema import UserCreate, UserInDB
-from app.repository.user_repository import UserRepository
-from app.util.fastapi_logger import get_logger
-
-logger = get_logger('main')
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from app.db import Base, engine, get_db
+from app.models import product
+from app.routers import product as product_router
+from strawberry.fastapi import GraphQLRouter
+from app.graphql.schema import schema
 
 app = FastAPI()
+
+# CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",   # if using Create React App
+        "http://localhost:5173"    # if using Vite
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include REST API
+app.include_router(product_router.router)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# ✅ Fix context_getter to use async generator
+async def get_context(request: Request):
+    db = next(get_db())
+    return {"db": db}
 
-@app.post("/users/", response_model=UserInDB)
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    logger.info("Users API CALL")
-    user_repo = UserRepository(db)
-    db_user = user_repo.get_user_by_email(user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    new_user = user_repo.create_user(user)
-    # Store user in Redis cache
-    await redis_client.set(f"user:{new_user.id}", new_user.json())
-
-    return new_user
-
-@app.get("/users/{user_id}", response_model=UserInDB)
-async def read_user(user_id: int, db: Session = Depends(get_db)):
-    logger.info('users/user_id API Call')
-    # Try to fetch user from Redis cache
-    cached_user = await redis_client.get(f"user:{user_id}")
-    if cached_user:
-        return UserInDB.parse_raw(cached_user)
-    user_repo = UserRepository(db)
-    db_user = user_repo.get_user(user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Manually convert db_user to a dictionary
-    user_dict = {
-        "id": db_user.id,
-        "name": db_user.name,
-        "email": db_user.email,
-        # add other fields as needed
-    }
-    # Serialize to JSON and store in Redis
-    await redis_client.set(f"user:{user_id}", json.dumps(user_dict))
-
-    return db_user
-
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="localhost", port=8000)
+# ✅ GraphQL router
+graphql_app = GraphQLRouter(
+    schema,
+    graphiql=True,
+    context_getter=get_context
+)
+app.include_router(graphql_app, prefix="/graphql")

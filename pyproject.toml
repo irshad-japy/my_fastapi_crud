@@ -41,3 +41,5 @@ databases = "^0.9.0"
 aiomysql = "^0.2.0"
 mysqlclient = "^2.2.4"
 python-dotenv = "^1.0.1"
+strawberry-graphql = {extras = ["fastapi"], version = "^0.278.0"}
+cryptography = "^45.0.5"

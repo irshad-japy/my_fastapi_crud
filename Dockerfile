@@ -1,11 +1,11 @@
 # Use Python 3.9.13 as the base image
 FROM python:3.9.13-slim
 
-# Set environment variables to prevent Python from buffering stdout and to avoid creating .pyc files
+# Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV POETRY_VIRTUALENVS_CREATE=false
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
 # Install system dependencies
@@ -19,17 +19,17 @@ RUN apt-get update && \
 # Install Poetry
 RUN pip install --no-cache-dir poetry
 
-# Copy the pyproject.toml and poetry.lock files
+# Copy Poetry files
 COPY pyproject.toml poetry.lock* ./
 
-# Install dependencies using Poetry
-RUN poetry install --no-root --no-dev
+# ❗FIX HERE — remove --no-dev
+RUN poetry install --no-root
 
-# Copy the current directory contents into the container at /app
+# Copy project files
 COPY . .
 
-# Expose port 8000 for the FastAPI app
+# Expose port for FastAPI
 EXPOSE 8000
 
-# Command to run the FastAPI app using Uvicorn
+# Run FastAPI app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -146,3 +146,15 @@ data/local
 
 # zip files
 *.zip
+
+# Ignore node dependencies
+node_modules/
+
+# Ignore Python cache and virtual env
+*.pyc
+.venv/
+my-fastapi-app-*
+
+# Ignore system files
+.DS_Store
+.env
